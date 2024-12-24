@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regular Grammar to State Diagram</title>
+  <style>
+    /* CSS Styling */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      align-self: flex-start;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #diagram-container {
+      margin-top: 20px;
+      text-align: center;
+      height: calc(100vh - 300px); /* Full viewport height minus space for form and margins */
+    }
+
+    #diagram {
+      height: 100%;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Regular Grammar to State Diagram</h1>
+
+    <form id="grammar-form">
+      <label for="grammar-input">Enter Regular Grammar:</label>
+      <textarea id="grammar-input" placeholder="Example: S -> aA | bB&#10;A -> aS | ε" required></textarea>
+      <button type="submit">Generate State Diagram</button>
+    </form>
+
+    <div id="diagram-container">
+      <h2>State Diagram</h2>
+      <div id="diagram"></div>
+    </div>
+  </div>
+
+  <!-- Cytoscape.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.23.0/cytoscape.min.js"></script>
+
+  <script>
+    document.getElementById('grammar-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const grammarInput = document.getElementById('grammar-input').value.trim();
+      const transitions = parseGrammar(grammarInput);
+      renderStateDiagram(transitions);
+    });
+
+    // Function to parse grammar into transitions
+    function parseGrammar(input) {
+      const transitions = [];
+      const rules = input.split('\n');
+
+      rules.forEach((rule) => {
+        const [state, production] = rule.split('->').map((s) => s.trim());
+        const productions = production.split('|').map((p) => p.trim());
+
+        productions.forEach((prod) => {
+          const symbol = prod[0];
+          const nextState = prod.length > 1 ? prod.slice(1) : 'FINAL';
+          transitions.push({ from: state, to: nextState, symbol });
+        });
+      });
+
+      return transitions;
+    }
+
+    // Function to render state diagram using Cytoscape
+    function renderStateDiagram(transitions) {
+      const cy = cytoscape({
+        container: document.getElementById('diagram'),
+        elements: createElements(transitions),
+        style: [
+          {
+            selector: 'node',
+            style: {
+              'background-color': 'data(bgColor)',
+              'label': 'data(label)',
+              'text-valign': 'center',
+              'text-halign': 'center',
+              'font-size': '14px',
+              'shape': 'data(shape)',
+            },
+          },
+          {
+            selector: 'edge',
+            style: {
+              'width': 2,
+              'line-color': '#007bff',
+              'target-arrow-color': '#007bff',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'label': 'data(label)',
+            },
+          },
+        ],
+        layout: {
+          name: 'breadthfirst',
+        },
+      });
+    }
+
+    // Function to create graph elements from transitions
+    function createElements(transitions) {
+      const nodes = new Set();
+      const edges = [];
+
+      transitions.forEach(({ from, to, symbol }) => {
+        nodes.add(from);
+        nodes.add(to);
+
+        edges.push({
+          data: {
+            source: from,
+            target: to,
+            label: symbol === 'ε' ? 'ε' : symbol,
+          },
+        });
+      });
+
+      const nodeElements = Array.from(nodes).map((node) => ({
+        data: {
+          id: node,
+          label: node,
+          bgColor: node === 'FINAL' ? '#4caf50' : node === transitions[0].from ? '#f44336' : '#007bff',
+          shape: node === 'FINAL' ? 'ellipse' : 'circle',
+        },
+      }));
+
+      return [...nodeElements, ...edges];
+    }
+  </script>
+</body>
+</html>
